@@ -1,0 +1,25 @@
+{
+  "name": "release-candidate-sign-off-action",
+  "version": "0.0.1",
+  "description": "Creates a release tag, cleans up the release branch, and posts to a Slack webhook.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/loopsocial/release-candidate-sign-off-action.git"
+  },
+  "keywords": [
+    "github",
+    "action",
+    "firework",
+    "loopsocial"
+  ],
+  "author": "Deric Walintukan <deric@fireworkhq.com>",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/loopsocial/release-candidate-sign-off-action/issues"
+  },
+  "homepage": "https://github.com/loopsocial/release-candidate-sign-off-action#readme"
+}
