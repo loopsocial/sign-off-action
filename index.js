@@ -24,7 +24,7 @@ const labelExists = (name) => {
 }
 
 /**
- * Posts to Slack via webhook
+ * Posts to Slack via webhook.
  * @param {object} body Body to post to Slack
  */
  const postToSlack = async (body) => {
