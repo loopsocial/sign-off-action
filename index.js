@@ -1,17 +1,49 @@
 const github = require('@actions/github')
 const core = require('@actions/core')
 
+/**
+ * Gets the input from the used action.
+ * @param {string} key Input key to fetch
+ * @returns {string} Returns the value of the input
+ */
 const getInput = (key) => {
   const input = core.getInput(key)
   if (!input) throw Error(`Input "${key}" was not defined`)
   return input
 }
 
-// Validates if the issue is a Release Candidate
-const validateReleaseCandidateIssue = () => {
+/**
+ * Checks if the issue has a label.
+ * @param {string} name Name of the label
+ * @returns {boolean} True if the label exists
+ */
+const labelExists = (name) => {
   const { labels } = github.context.issue()
   const labelNames = labels.map((label) => label.name)
-  if (!labelNames.includes('RC')) throw Error('Issue does not have "RC" label')
+  return labelNames.includes(name)
+}
+
+/**
+ * Posts to Slack via webhook
+ * @param {object} body Body to post to Slack
+ */
+ const postToSlack = async (body) => {
+  const { owner, repo } = github.context.repo()
+  const webhookUrl = await octokit.rest.actions.getRepoSecret({
+    owner,
+    repo,
+    secret_name: 'SLACK_WEBHOOK_URL',
+  })
+
+  const request = new Request(webhookUrl, { method: 'POST', body })
+  await fetch(request)
+}
+
+/**
+ * Validates if the issue is a Release Candidate.
+ */
+const validateReleaseCandidateIssue = () => {
+  if (!labelExists('RC')) throw Error('Issue does not have "RC" label')
 }
 
 // Parses the issue body and gets the tag and branch 
@@ -33,7 +65,13 @@ const parseIssueBody = () => {
   return { tag, branch } 
 }
 
-// Creates the release tag
+/**
+ * Creates the release tag.
+ * @param {object} octokit Octokit
+ * @param {string} tag Tag that will be used for the release
+ * @param {string} branch Branch that will be used for the release
+ * @returns {string} Release URL on Github
+ */
 const createRelease = async (octokit, tag, branch) => {
   const { owner, repo } = github.context.repo()
   const { data: { html_url } } = await octokit.rest.repos.createRelease({
@@ -48,6 +86,11 @@ const createRelease = async (octokit, tag, branch) => {
   return html_url
 }
 
+/**
+ * Posts to a Slack webhook of the successful release.
+ * @param {string} tag Tag name of the release
+ * @param {string} releaseUrl Release URL on Github
+ */
 const postReleaseApproved = async (tag, releaseUrl) => {
   await postToSlack({
     "blocks": [
@@ -78,23 +121,14 @@ const postReleaseApproved = async (tag, releaseUrl) => {
   })
 }
 
-// Posts to Slack via webhook
-const postToSlack = async (body) => {
-  const { owner, repo } = github.context.repo()
-  const webhookUrl = await octokit.rest.actions.getRepoSecret({
-    owner,
-    repo,
-    secret_name: 'SLACK_WEBHOOK_URL',
-  })
-
-  const request = new Request(webhookUrl, { method: 'POST', body })
-  await fetch(request)
-}
-
-const deleteReleaseBranch = async (octokit, tag, branch) => {
-  const { labels } = github.context.issue()
-  const labelNames = labels.map((label) => label.name)
-  if (labelNames.includes('RC') && !labelNames.includes('QA Approved')) {
+/**
+ * Handles cancelling the release if the label does not exist.
+ * @param {object} octokit Octokit
+ * @param {string} tag Tag that was meant to be released
+ * @param {string} branch Release branch that will be deleted
+ */
+const handleReleaseCancelled = async (octokit, tag, branch) => {
+  if (!labelExists('QA Approved')) {
     const { owner, repo } = github.context.repo()
 
     // Delete Release Candidate branch
@@ -141,7 +175,7 @@ const run = async () => {
     await postReleaseApproved(tag, releaseUrl)
 
     // Handle release cancelled
-    await deleteReleaseBranch(octokit, tag, branch)
+    await handleReleaseCancelled(octokit, tag, branch)
   } catch (error) {
     core.setFailed(error.message)
   }
