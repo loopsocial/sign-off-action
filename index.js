@@ -7,6 +7,15 @@ const getInput = (key) => {
   return input
 }
 
+// Checks if the issue has the expected `RC` and `QA Approved` labels
+const validateIssueLabels = () => {
+  const { labels } = github.context.issue()
+  
+  const labelNames = labels.map((label) => label.name)
+  if (!labelNames.includes('RC')) throw Error('Issue does not have "RC" label')
+  if (!labelNames.includes('QA Approved')) throw Error('Issue does not have "QA Approved" label')
+}
+
 const parseIssueBody = () => {
   const { body } = github.context.issue()
   
@@ -25,30 +34,7 @@ const parseIssueBody = () => {
   return { tag, branch } 
 }
 
-// Tags are formatted as: YYYYMMDD.N
-// N is the current deployment of the day, starting with 1.
-// If multiple deployments happen on the same date, N increments.
-// const getTags = async (octokit) => {
-//   const { owner, repo } = github.context.repo()
-//   const tags = await octokit.rest.repos.listTags({ owner, repo })
-  
-//   // Loop through tags and see if there is another tag from today.
-//   const today = getTodaysDate()
-//   const latestTag = tags.find((tag) => tag.name.startsWith('v'))
-//   const existing = tags.find((tag) => tag.name.startsWith(`v${today}`))
-//   let nextTag
-//   if (existing) {
-//     // Found existing tag, increment the N by 1.
-//     const [, n] = existing.split('.')
-//     nextTag = `v${today}.${Number.parseInt(n) + 1}`
-//   } else {
-//     // No existing tag found, start N at 1.
-//     nextTag = `v${today}.1`
-//   }
-//   return { latestTag, nextTag }
-// }
-
-// const getCommitDiff = async (octokit, latestTag) => {
+// const createRelease = async (octokit, latestTag) => {
 //   const { owner, repo } = github.context.repo()
 //   const { status, commits } = await octokit.rest.repos.compareCommitsWithBasehead({
 //     owner,
@@ -60,16 +46,6 @@ const parseIssueBody = () => {
 //   if (status !== 'ahead') throw Error('Head branch is not ahead of base branch')
   
 //   return commits.reduce((prev, curr) => prev + `${curr.commit.message}\n`, "")
-// }
-
-// const createReleaseBranch = async (octokit, nextTag) => {
-//   const { owner, repo } = github.context.repo()
-//   await octokit.rest.git.createRef({
-//     owner,
-//     repo,
-//     ref: `refs/heads/release/${nextTag}`,
-//     sha: github.context.sha
-//   })
 // }
 
 const postToSlack = async (nextTag, issueUrl) => {
@@ -117,8 +93,11 @@ const run = async () => {
     // Get token and init
     const token = getInput('github-token')
     const octokit = github.getOctokit(token)
+
+    // Validate issue
+    validateIssueLabels()
     
-    // Get next tag and commit history 
+    // Parse tag and branch to create the release
     const { tag, branch } = parseIssueBody()
 
     // Send webhook to Slack
