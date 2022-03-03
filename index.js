@@ -49,9 +49,8 @@ const createRelease = async (octokit, tag, branch) => {
   return html_url
 }
 
-// Posts to Slack via webhook
-const postToSlack = async (tag, releaseUrl) => {
-  const body = {
+const postReleaseApproved = async (tag, releaseUrl) => {
+  await postToSlack({
     "blocks": [
       {
         "type": "header",
@@ -77,8 +76,11 @@ const postToSlack = async (tag, releaseUrl) => {
         }
       }
     ]
-  }
+  })
+}
 
+// Posts to Slack via webhook
+const postToSlack = async (body) => {
   const { owner, repo } = github.context.repo()
   const webhookUrl = await octokit.rest.actions.getRepoSecret({
     owner,
@@ -90,23 +92,55 @@ const postToSlack = async (tag, releaseUrl) => {
   await fetch(request)
 }
 
+const deleteReleaseBranch = async (octokit, tag, branch) => {
+  const { labels } = github.context.issue()
+  const labelNames = labels.map((label) => label.name)
+  if (labelNames.includes('RC') && !labelNames.includes('QA Approved')) {
+    const { owner, repo } = github.context.repo()
+
+    // Delete Release Candidate branch
+    await octokit.rest.git.deleteRef({
+      owner,
+      repo,
+      ref: `heads/${branch}`
+    })
+
+    // Post cancelled message
+    await postToSlack({
+      "blocks": [
+        {
+          "type": "header",
+          "text": {
+            "type": "plain_text",
+            "text": `[${tag}] Release cancelled ❌`
+          }
+        },
+        {
+          "type": "section",
+          "text": {
+            "type": "mrkdwn",
+            "text": "The Release Candidate was cancelled."
+          }
+        }
+      ]
+    })
+  }
+}
+
 const run = async () => {
   try {
     // Get token and init
     const token = getInput('github-token')
     const octokit = github.getOctokit(token)
 
-    // Validate issue
+    // Handle release signed off
     validateIssueLabels()
-    
-    // Parse tag and branch to create the release
     const { tag, branch } = parseIssueBody()
-
-    // Create the release tag
     const releaseUrl = await createRelease(octokit, tag, branch)
+    await postReleaseApproved(tag, releaseUrl)
 
-    // Send webhook to Slack
-    await postToSlack(tag, releaseUrl)
+    // Handle release cancelled
+    await deleteReleaseBranch(octokit, tag, branch)
   } catch (error) {
     core.setFailed(error.message)
   }
