@@ -10,12 +10,12 @@ const getInput = (key) => {
 // Checks if the issue has the expected `RC` and `QA Approved` labels
 const validateIssueLabels = () => {
   const { labels } = github.context.issue()
-  
   const labelNames = labels.map((label) => label.name)
   if (!labelNames.includes('RC')) throw Error('Issue does not have "RC" label')
   if (!labelNames.includes('QA Approved')) throw Error('Issue does not have "QA Approved" label')
 }
 
+// Parses the issue body and gets the tag and branch 
 const parseIssueBody = () => {
   const { body } = github.context.issue()
   
@@ -34,35 +34,37 @@ const parseIssueBody = () => {
   return { tag, branch } 
 }
 
-// const createRelease = async (octokit, latestTag) => {
-//   const { owner, repo } = github.context.repo()
-//   const { status, commits } = await octokit.rest.repos.compareCommitsWithBasehead({
-//     owner,
-//     repo,
-//     basehead: `${latestTag}...${github.context.sha}`,
-//     per_page: 100
-//   })
+// Creates the release tag
+const createRelease = async (octokit, tag, branch) => {
+  const { owner, repo } = github.context.repo()
+  const { data: { html_url } } = await octokit.rest.repos.createRelease({
+    owner,
+    repo,
+    name: tag,
+    tag_name: tag,
+    draft: true,
+    target_commitish: branch
+  })
 
-//   if (status !== 'ahead') throw Error('Head branch is not ahead of base branch')
-  
-//   return commits.reduce((prev, curr) => prev + `${curr.commit.message}\n`, "")
-// }
+  return html_url
+}
 
-const postToSlack = async (nextTag, issueUrl) => {
+// Posts to Slack via webhook
+const postToSlack = async (tag, releaseUrl) => {
   const body = {
     "blocks": [
       {
         "type": "header",
         "text": {
           "type": "plain_text",
-          "text": `[${nextTag}] Release Candidate created 🧪`
+          "text": `[${tag}] Release approved ✅`
         }
       },
       {
         "type": "section",
         "text": {
           "type": "mrkdwn",
-          "text": "The Release Candidate is ready for testing."
+          "text": "The Release Candidate is approved for publishing."
         },
         "accessory": {
           "type": "button",
@@ -70,7 +72,7 @@ const postToSlack = async (nextTag, issueUrl) => {
             "type": "plain_text",
             "text": "Go"
           },
-          "url": issueUrl,
+          "url": `${releaseUrl}`,
           "action_id": "button-action"
         }
       }
@@ -100,8 +102,11 @@ const run = async () => {
     // Parse tag and branch to create the release
     const { tag, branch } = parseIssueBody()
 
+    // Create the release tag
+    const releaseUrl = await createRelease(octokit, tag, branch)
+
     // Send webhook to Slack
-    // await postToSlack(nextTag, issueUrl)
+    await postToSlack(tag, releaseUrl)
   } catch (error) {
     core.setFailed(error.message)
   }
