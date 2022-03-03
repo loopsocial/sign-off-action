@@ -46,7 +46,9 @@ const validateReleaseCandidateIssue = () => {
   if (!labelExists('RC')) throw Error('Issue does not have "RC" label')
 }
 
-// Parses the issue body and gets the tag and branch 
+/**
+ * Parses the issue body and gets the tag and branch.
+ */
 const parseIssueBody = () => {
   const { body } = github.context.issue()
   
@@ -66,63 +68,59 @@ const parseIssueBody = () => {
 }
 
 /**
- * Creates the release tag.
+ * Handles release signed off.
  * @param {object} octokit Octokit
  * @param {string} tag Tag that will be used for the release
  * @param {string} branch Branch that will be used for the release
  * @returns {string} Release URL on Github
  */
-const createRelease = async (octokit, tag, branch) => {
-  const { owner, repo } = github.context.repo()
-  const { data: { html_url } } = await octokit.rest.repos.createRelease({
-    owner,
-    repo,
-    name: tag,
-    tag_name: tag,
-    draft: true,
-    target_commitish: branch
-  })
+const handleReleaseSignedOff = async (octokit, tag, branch) => {
+  if (labelExists('QA Approved')) {
+    const { owner, repo } = github.context.repo()
+    
+    // Create the release
+    const { data: { html_url: releaseUrl } } = await octokit.rest.repos.createRelease({
+      owner,
+      repo,
+      name: tag,
+      tag_name: tag,
+      draft: true,
+      target_commitish: branch
+    })
 
-  return html_url
-}
-
-/**
- * Posts to a Slack webhook of the successful release.
- * @param {string} tag Tag name of the release
- * @param {string} releaseUrl Release URL on Github
- */
-const postReleaseApproved = async (tag, releaseUrl) => {
-  await postToSlack({
-    "blocks": [
-      {
-        "type": "header",
-        "text": {
-          "type": "plain_text",
-          "text": `[${tag}] Release approved ✅`
-        }
-      },
-      {
-        "type": "section",
-        "text": {
-          "type": "mrkdwn",
-          "text": "The Release Candidate is approved for publishing."
-        },
-        "accessory": {
-          "type": "button",
+    // Post success message
+    await postToSlack({
+      "blocks": [
+        {
+          "type": "header",
           "text": {
             "type": "plain_text",
-            "text": "Go"
+            "text": `[${tag}] Release approved ✅`
+          }
+        },
+        {
+          "type": "section",
+          "text": {
+            "type": "mrkdwn",
+            "text": "The Release Candidate is approved for publishing."
           },
-          "url": `${releaseUrl}`,
-          "action_id": "button-action"
+          "accessory": {
+            "type": "button",
+            "text": {
+              "type": "plain_text",
+              "text": "Go"
+            },
+            "url": `${releaseUrl}`,
+            "action_id": "button-action"
+          }
         }
-      }
-    ]
-  })
+      ]
+    })
+  }
 }
 
 /**
- * Handles cancelling the release if the label does not exist.
+ * Handles cancelling the release.
  * @param {object} octokit Octokit
  * @param {string} tag Tag that was meant to be released
  * @param {string} branch Release branch that will be deleted
@@ -168,11 +166,10 @@ const run = async () => {
 
     // Validates if the issue is a Release Candidate
     validateReleaseCandidateIssue()
+    const { tag, branch } = parseIssueBody()
 
     // Handle release signed off
-    const { tag, branch } = parseIssueBody()
-    const releaseUrl = await createRelease(octokit, tag, branch)
-    await postReleaseApproved(tag, releaseUrl)
+    await handleReleaseSignedOff(octokit, tag, branch)
 
     // Handle release cancelled
     await handleReleaseCancelled(octokit, tag, branch)
