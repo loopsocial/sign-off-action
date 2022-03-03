@@ -7,12 +7,11 @@ const getInput = (key) => {
   return input
 }
 
-// Checks if the issue has the expected `RC` and `QA Approved` labels
-const validateIssueLabels = () => {
+// Validates if the issue is a Release Candidate
+const validateReleaseCandidateIssue = () => {
   const { labels } = github.context.issue()
   const labelNames = labels.map((label) => label.name)
   if (!labelNames.includes('RC')) throw Error('Issue does not have "RC" label')
-  if (!labelNames.includes('QA Approved')) throw Error('Issue does not have "QA Approved" label')
 }
 
 // Parses the issue body and gets the tag and branch 
@@ -133,8 +132,10 @@ const run = async () => {
     const token = getInput('github-token')
     const octokit = github.getOctokit(token)
 
+    // Validates if the issue is a Release Candidate
+    validateReleaseCandidateIssue()
+
     // Handle release signed off
-    validateIssueLabels()
     const { tag, branch } = parseIssueBody()
     const releaseUrl = await createRelease(octokit, tag, branch)
     await postReleaseApproved(tag, releaseUrl)
