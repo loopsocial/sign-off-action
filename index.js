@@ -18,7 +18,7 @@ const getInput = (key) => {
  * @returns {boolean} True if the label exists
  */
 const labelExists = (name) => {
-  const { labels } = github.context.issue()
+  const { labels } = github.context.issue
   const labelNames = labels.map((label) => label.name)
   return labelNames.includes(name)
 }
@@ -28,7 +28,7 @@ const labelExists = (name) => {
  * @param {object} body Body to post to Slack
  */
  const postToSlack = async (body) => {
-  const { owner, repo } = github.context.repo()
+  const { owner, repo } = github.context.repo
   const webhookUrl = await octokit.rest.actions.getRepoSecret({
     owner,
     repo,
@@ -50,7 +50,7 @@ const validateReleaseCandidateIssue = () => {
  * Parses the issue body and gets the tag and branch.
  */
 const parseIssueBody = () => {
-  const { body } = github.context.issue()
+  const { body } = github.context.issue
   
   // Extract release tag with regex
   const tagRegex = new RegExp(/^-\sRelease\stag:\s(v[0-9]{8}.[0-9])$/m)
@@ -76,7 +76,7 @@ const parseIssueBody = () => {
  */
 const handleReleaseSignedOff = async (octokit, tag, branch) => {
   if (labelExists('QA Approved')) {
-    const { owner, repo } = github.context.repo()
+    const { owner, repo } = github.context.repo
     
     // Create the release
     const { data: { html_url: releaseUrl } } = await octokit.rest.repos.createRelease({
@@ -127,7 +127,7 @@ const handleReleaseSignedOff = async (octokit, tag, branch) => {
  */
 const handleReleaseCancelled = async (octokit, tag, branch) => {
   if (!labelExists('QA Approved')) {
-    const { owner, repo } = github.context.repo()
+    const { owner, repo } = github.context.repo
 
     // Delete Release Candidate branch
     await octokit.rest.git.deleteRef({
