@@ -107,14 +107,14 @@ const handleReleaseSignedOff = async (labels, octokit, tag, branch) => {
           "type": "header",
           "text": {
             "type": "plain_text",
-            "text": `[${tag}] Release approved ✅`
+            "text": `[${tag}] Release/Hotfix approved ✅`
           }
         },
         {
           "type": "section",
           "text": {
             "type": "mrkdwn",
-            "text": "The Release Candidate is approved for publishing."
+            "text": `${branch} is approved for publishing.`
           },
           "accessory": {
             "type": "button",
@@ -156,14 +156,14 @@ const handleReleaseCancelled = async (labels, octokit, tag, branch) => {
           "type": "header",
           "text": {
             "type": "plain_text",
-            "text": `[${tag}] Release cancelled ❌`
+            "text": `[${tag}] Release/Hotfix cancelled ❌`
           }
         },
         {
           "type": "section",
           "text": {
             "type": "mrkdwn",
-            "text": "The Release Candidate was cancelled."
+            "text": `${branch} was cancelled.`
           }
         }
       ]
