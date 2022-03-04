@@ -1,5 +1,6 @@
 const github = require('@actions/github')
 const core = require('@actions/core')
+const axios = require('axios')
 
 /**
  * Gets the input from the used action.
@@ -28,15 +29,8 @@ const labelExists = (name) => {
  * @param {object} body Body to post to Slack
  */
  const postToSlack = async (body) => {
-  const { owner, repo } = github.context.repo
-  const webhookUrl = await octokit.rest.actions.getRepoSecret({
-    owner,
-    repo,
-    secret_name: 'SLACK_WEBHOOK_URL',
-  })
-
-  const request = new Request(webhookUrl, { method: 'POST', body })
-  await fetch(request)
+  const webhookUrl = getInput('slack-webhook-url')
+  await axios.post(webhookUrl, body)
 }
 
 /**
