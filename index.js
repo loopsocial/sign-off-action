@@ -14,14 +14,28 @@ const getInput = (key) => {
 }
 
 /**
- * Checks if the issue has a label.
- * @param {string} name Name of the label
- * @returns {boolean} True if the label exists
+ * Gets the issue.
+ * @param {object} octokit Octokit
+ * @returns {object} Issue
  */
-const labelExists = (name) => {
-  const { labels } = github.context.issue
-  const labelNames = labels.map((label) => label.name)
-  return labelNames.includes(name)
+const getIssue = async (octokit) => {
+  const { owner, repo } = github.context.repo
+  const { number: issueNumber } = github.context.issue
+  const { data: issue } = await octokit.rest.issues.get({
+    owner,
+    repo,
+    issue_number: issueNumber
+  })
+  return issue
+}
+
+/**
+ * Gets the labels for a given issue.
+ * @param {array} labels Issue labels
+ * @returns {array} List of label names
+ */
+ const getLabels = (labels) => {
+  return labels.map((label) => label.name)
 }
 
 /**
@@ -35,25 +49,28 @@ const labelExists = (name) => {
 
 /**
  * Validates if the issue is a Release Candidate.
+ * @param {array} labels List of label names for the issue
  */
-const validateReleaseCandidateIssue = () => {
-  if (!labelExists('RC')) throw Error('Issue does not have "RC" label')
+const validateReleaseCandidateIssue = (labels) => {
+  if (!labels.includes('RC')) throw Error('Issue does not have "RC" label')
 }
 
 /**
  * Parses the issue body and gets the tag and branch.
+ * @param {object} body Issue body
+ * @returns {object} Tag and branch
  */
-const parseIssueBody = () => {
-  const { body } = github.context.issue
-  
+const parseIssueBody = (body) => {
+  console.log('body', body)
+
   // Extract release tag with regex
-  const tagRegex = new RegExp(/^-\sRelease\stag:\s(v[0-9]{8}.[0-9])$/m)
+  const tagRegex = new RegExp(/-\sRelease\stag:\s(v[0-9]{8}.[0-9])/m)
   const tagMatch = body.match(tagRegex)
   if (!tagMatch) throw Error('No "Release Tag" found in issue body')
   const tag = tagMatch[1]
 
   // Extract branch with regex
-  const branchRegex = new RegExp(/^-\sBranch:\s(release\/v[0-9]{8}.[0-9]+)$/m)
+  const branchRegex = new RegExp(/-\sBranch:\s(release\/v[0-9]{8}.[0-9]+)/m)
   const branchMatch = body.match(branchRegex)
   if (!branchMatch) throw Error('No "Branch" found in issue body')
   const branch = branchMatch[1]
@@ -63,13 +80,14 @@ const parseIssueBody = () => {
 
 /**
  * Handles release signed off.
+ * @param {array} labels List of labels
  * @param {object} octokit Octokit
  * @param {string} tag Tag that will be used for the release
  * @param {string} branch Branch that will be used for the release
  * @returns {string} Release URL on Github
  */
-const handleReleaseSignedOff = async (octokit, tag, branch) => {
-  if (labelExists('QA Approved')) {
+const handleReleaseSignedOff = async (labels, octokit, tag, branch) => {
+  if (labels.includes('QA Approved')) {
     const { owner, repo } = github.context.repo
     
     // Create the release
@@ -78,7 +96,7 @@ const handleReleaseSignedOff = async (octokit, tag, branch) => {
       repo,
       name: tag,
       tag_name: tag,
-      draft: true,
+      draft: false,
       target_commitish: branch
     })
 
@@ -115,12 +133,13 @@ const handleReleaseSignedOff = async (octokit, tag, branch) => {
 
 /**
  * Handles cancelling the release.
+ * @param {array} labels List of labels
  * @param {object} octokit Octokit
  * @param {string} tag Tag that was meant to be released
  * @param {string} branch Release branch that will be deleted
  */
-const handleReleaseCancelled = async (octokit, tag, branch) => {
-  if (!labelExists('QA Approved')) {
+const handleReleaseCancelled = async (labels, octokit, tag, branch) => {
+  if (!labels.includes('QA Approved')) {
     const { owner, repo } = github.context.repo
 
     // Delete Release Candidate branch
@@ -157,16 +176,18 @@ const run = async () => {
     // Get token and init
     const token = getInput('github-token')
     const octokit = github.getOctokit(token)
+    const issue = await getIssue(octokit)
+    const labels = getLabels(issue.labels)
 
     // Validates if the issue is a Release Candidate
-    validateReleaseCandidateIssue()
-    const { tag, branch } = parseIssueBody()
+    validateReleaseCandidateIssue(labels)
+    const { tag, branch } = parseIssueBody(issue.body)
 
     // Handle release signed off
-    await handleReleaseSignedOff(octokit, tag, branch)
+    await handleReleaseSignedOff(labels, octokit, tag, branch)
 
     // Handle release cancelled
-    await handleReleaseCancelled(octokit, tag, branch)
+    await handleReleaseCancelled(labels, octokit, tag, branch)
   } catch (error) {
     core.setFailed(error.message)
   }
