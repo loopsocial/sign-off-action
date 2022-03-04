@@ -1,9 +1,9 @@
-# Release Candidate Sign Off Action
+# Sign Off Action
 
 Github Action that handles the following:
 
-1. Handles a Release Candidate QA approved sign off
-2. Handles a Release Candidate QA rejected sign off
+1. Handles a Release Candidate or Hotfix QA approved sign off
+2. Handles a Release Candidate or Hotfix QA rejected sign off
 
 ## Inputs
 
@@ -20,7 +20,7 @@ URL of the Slack webhook to send the message to.
 ## Usage
 
 ```yaml
-uses: loopsocial/release-candidate-sign-off-action@v1.0.0
+uses: loopsocial/sign-off-action@v1.0.0
 with:
   github-token: ${{ secrets.GITHUB_TOKEN }}
   slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
