@@ -114,7 +114,7 @@ const handleReleaseSignedOff = async (labels, octokit, tag, branch) => {
           "type": "section",
           "text": {
             "type": "mrkdwn",
-            "text": `${branch} is approved for publishing.`
+            "text": `\`${branch}\` is approved for publishing.`
           },
           "accessory": {
             "type": "button",
