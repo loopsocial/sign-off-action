@@ -1,5 +1,5 @@
-name: "Release Candidate Sign Off Action"
-description: "Github Action to sign off a Release Candidate."
+name: "Sign Off Action"
+description: "Github Action that handles a Release Candidate or Hotfix sign off."
 inputs:
   github-token:
     description: "Access token for your repository"
