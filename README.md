@@ -7,12 +7,12 @@ Github Action that handles the following:
 
 ## Inputs
 
-## `github-token`
+### `github-token`
 
 **Required**
 Github token to use to call the Github API.
 
-## `slack-webhook-url`
+### `slack-webhook-url`
 
 **Required**
 URL of the Slack webhook to send the message to.
