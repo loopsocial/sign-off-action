@@ -64,13 +64,13 @@ const parseIssueBody = (body) => {
   console.log('body', body)
 
   // Extract release tag with regex
-  const tagRegex = new RegExp(/-\sRelease\stag:\s(v[0-9]{8}.[0-9])/m)
+  const tagRegex = new RegExp(/-\sRelease\stag:\s(.+)\n/m)
   const tagMatch = body.match(tagRegex)
   if (!tagMatch) throw Error('No "Release Tag" found in issue body')
   const tag = tagMatch[1]
 
   // Extract branch with regex
-  const branchRegex = new RegExp(/-\sBranch:\s(release\/v[0-9]{8}.[0-9]+)/m)
+  const branchRegex = new RegExp(/-\sBranch:\s(.+)\n/m)
   const branchMatch = body.match(branchRegex)
   if (!branchMatch) throw Error('No "Branch" found in issue body')
   const branch = branchMatch[1]
