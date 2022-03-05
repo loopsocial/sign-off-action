@@ -61,8 +61,6 @@ const validateReleaseCandidateIssue = (labels) => {
  * @returns {object} Tag and branch
  */
 const parseIssueBody = (body) => {
-  console.log('body', body)
-
   // Extract release tag with regex
   const tagRegex = new RegExp(/-\sRelease\stag:\s(.+)\n/m)
   const tagMatch = body.match(tagRegex)
