@@ -17,11 +17,24 @@ Github token to use to call the Github API.
 **Required**
 URL of the Slack webhook to send the message to.
 
-## Usage
+## Example Usage
 
 ```yaml
-uses: loopsocial/sign-off-action@v1.0.0
-with:
-  github-token: ${{ secrets.GITHUB_TOKEN }}
-  slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+name: Sign Off
+
+on:
+  issues:
+    types: [closed]
+
+jobs:
+  sign_off:
+    runs-on: ubuntu-latest
+    name: Sign Off Release/Hotfix
+    steps:
+      - name: Sign Off Release/Hotfix
+        id: sign_off
+        uses: loopsocial/sign-off-action@v1.0.4
+        with:
+          github-token: ${{ secrets.WORKFLOW_TOKEN }}
+          slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
 ```
