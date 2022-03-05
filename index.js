@@ -163,7 +163,7 @@ const handleReleaseCancelled = async (labels, octokit, tag, branch) => {
           "type": "section",
           "text": {
             "type": "mrkdwn",
-            "text": `${branch} was cancelled.`
+            "text": `\`${branch}\` was cancelled.`
           }
         }
       ]
