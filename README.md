@@ -33,7 +33,7 @@ jobs:
     steps:
       - name: Sign Off Release/Hotfix
         id: sign_off
-        uses: loopsocial/sign-off-action@v1.0.4
+        uses: loopsocial/sign-off-action@v1.0.7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
