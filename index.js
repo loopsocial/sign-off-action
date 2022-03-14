@@ -172,7 +172,7 @@ const handleReleaseCancelled = async (labels, octokit, tag, branch) => {
 const run = async () => {
   try {
     // Get token and init
-    const token = getInput('github-token')
+    const token = getInput('workflow-token')
     const octokit = github.getOctokit(token)
     const issue = await getIssue(octokit)
     const labels = getLabels(issue.labels)

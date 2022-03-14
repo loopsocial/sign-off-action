@@ -7,15 +7,13 @@ Github Action that handles the following:
 
 ## Inputs
 
-### `github-token`
+### `workflow-token`
 
-**Required**
-Github token to use to call the Github API. This can be the default `GITHUB_TOKEN`.
+(Required) Github personal access token (`WORKFLOW_TOKEN`) used to call the Github API.
 
 ### `slack-webhook-url`
 
-**Required**
-URL of the Slack webhook to send the message to.
+(Required) URL of the Slack webhook to send the message to.
 
 ## Example Usage
 
@@ -33,8 +31,8 @@ jobs:
     steps:
       - name: Sign Off Release/Hotfix
         id: sign_off
-        uses: loopsocial/sign-off-action@v1.0.7
+        uses: loopsocial/sign-off-action@v1.0.9
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          workflow-token: ${{ secrets.WORKFLOW_TOKEN }}
           slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
 ```

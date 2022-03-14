@@ -1,8 +1,8 @@
 name: "Sign Off Action"
 description: "Github Action that handles a Release Candidate or Hotfix sign off."
 inputs:
-  github-token:
-    description: "Access token for your repository"
+  workflow-token:
+    description: "Personal access token"
     required: true
   slack-webhook-url:
     description: "URL to send Slack webhooks to"
