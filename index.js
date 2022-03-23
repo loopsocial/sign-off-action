@@ -62,18 +62,18 @@ const validateReleaseCandidateIssue = (labels) => {
  */
 const parseIssueBody = (body) => {
   // Extract release tag with regex
-  const tagRegex = new RegExp(/-\sRelease\stag:\s(.+)\n/m)
+  const tagRegex = new RegExp(/-\sRelease\stag:\s(.*?)\n/m)
   const tagMatch = body.match(tagRegex)
   if (!tagMatch) throw Error(`No "Release tag" found in issue body:\n${body}`)
   const tag = tagMatch[1]
 
   // Extract branch with regex
-  const branchRegex = new RegExp(/-\sBranch:\s(.+)\n/m)
+  const branchRegex = new RegExp(/-\sBranch:\s(.*?)\n/m)
   const branchMatch = body.match(branchRegex)
   if (!branchMatch) throw Error(`No "Branch" found in issue body:\n${body}`)
   const branch = branchMatch[1]
 
-  return { tag, branch } 
+  return { tag, branch }
 }
 
 /**
