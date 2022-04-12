@@ -31,7 +31,7 @@ jobs:
     steps:
       - name: Sign Off Release/Hotfix
         id: sign_off
-        uses: loopsocial/sign-off-action@v1.0.9
+        uses: loopsocial/sign-off-action@v1.0.12
         with:
           workflow-token: ${{ secrets.WORKFLOW_TOKEN }}
           slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
