@@ -126,13 +126,6 @@ const handleReleaseSignedOff = async (labels, octokit, tag, branch) => {
         }
       ]
     })
-
-    // Delete Release Candidate branch
-    await octokit.rest.git.deleteRef({
-      owner,
-      repo,
-      ref: `heads/${branch}`
-    })
   }
 }
 
