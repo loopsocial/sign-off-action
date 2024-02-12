@@ -132,21 +132,11 @@ const handleReleaseSignedOff = async (labels, octokit, tag, branch) => {
 /**
  * Handles cancelling the release.
  * @param {array} labels List of labels
- * @param {object} octokit Octokit
  * @param {string} tag Tag that was meant to be released
  * @param {string} branch Release branch that will be deleted
  */
-const handleReleaseCancelled = async (labels, octokit, tag, branch) => {
+const handleReleaseCancelled = async (labels, tag, branch) => {
   if (!labels.includes('QA Approved')) {
-    const { owner, repo } = github.context.repo
-
-    // Delete Release Candidate branch
-    await octokit.rest.git.deleteRef({
-      owner,
-      repo,
-      ref: `heads/${branch}`
-    })
-
     // Post cancelled message
     await postToSlack({
       "blocks": [
@@ -185,7 +175,7 @@ const run = async () => {
     await handleReleaseSignedOff(labels, octokit, tag, branch)
 
     // Handle release cancelled
-    await handleReleaseCancelled(labels, octokit, tag, branch)
+    await handleReleaseCancelled(labels, tag, branch)
   } catch (error) {
     core.setFailed(error.message)
   }
