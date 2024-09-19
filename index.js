@@ -1,6 +1,9 @@
-const github = require('@actions/github')
-const core = require('@actions/core')
-const axios = require('axios')
+const github = require("@actions/github")
+const core = require("@actions/core")
+const axios = require("axios")
+
+const RC_LABEL = "RC"
+const APPROVED_LABEL_PREFIX = "QA Approved"
 
 /**
  * Gets the input from the used action.
@@ -34,7 +37,7 @@ const getIssue = async (octokit) => {
  * @param {array} labels Issue labels
  * @returns {array} List of label names
  */
- const getLabels = (labels) => {
+const getLabels = (labels) => {
   return labels.map((label) => label.name)
 }
 
@@ -42,8 +45,8 @@ const getIssue = async (octokit) => {
  * Posts to Slack via webhook.
  * @param {object} body Body to post to Slack
  */
- const postToSlack = async (body) => {
-  const webhookUrl = getInput('slack-webhook-url')
+const postToSlack = async (body) => {
+  const webhookUrl = getInput("slack-webhook-url")
   await axios.post(webhookUrl, body)
 }
 
@@ -52,8 +55,14 @@ const getIssue = async (octokit) => {
  * @param {array} labels List of label names for the issue
  */
 const validateReleaseCandidateIssue = (labels) => {
-  if (!labels.includes('RC')) throw Error('Issue does not have "RC" label')
+  if (!labels.includes(RC_LABEL)) throw Error(`Issue does not have "${RC_LABEL}" label`)
 }
+
+/**
+ * Validates if the issue is approved.
+ * @param {array} labels List of label names for the issue
+ */
+const validateApprovedIssue = (labels) => labels.some((label) => label.startsWith(APPROVED_LABEL_PREFIX))
 
 /**
  * Parses the issue body and gets the tag and branch.
@@ -84,49 +93,62 @@ const parseIssueBody = (body) => {
  * @param {string} branch Branch that will be used for the release
  * @returns {string} Release URL on Github
  */
-const handleReleaseSignedOff = async (labels, octokit, tag, branch) => {
-  if (labels.includes('QA Approved')) {
-    const { owner, repo } = github.context.repo
-    
-    // Create the release
-    const { data: { html_url: releaseUrl } } = await octokit.rest.repos.createRelease({
-      owner,
-      repo,
-      name: tag,
-      tag_name: tag,
-      draft: false,
-      target_commitish: branch
-    })
+const handleReleaseSignedOff = async (octokit, tag, branch, issue) => {
+  const { owner, repo } = github.context.repo
 
-    // Post success message
-    await postToSlack({
-      "blocks": [
-        {
-          "type": "header",
+  // Create the release
+  const {
+    data: { html_url: releaseUrl, id: releaseId }
+  } = await octokit.rest.repos.createRelease({
+    owner,
+    repo,
+    name: tag,
+    tag_name: tag,
+    draft: false,
+    target_commitish: branch
+  })
+
+  await octokit.rest.repos.uploadReleaseAsset({
+    owner,
+    repo,
+    release_id: releaseId,
+    name: "sign-off-metadata.json",
+    data: JSON.stringify({
+      issue
+    }),
+    "headers": {
+      "content-type": "application/json"
+    }
+  })
+
+  // Post success message
+  await postToSlack({
+    "blocks": [
+      {
+        "type": "header",
+        "text": {
+          "type": "plain_text",
+          "text": `[${tag}] Release/Hotfix approved ✅`
+        }
+      },
+      {
+        "type": "section",
+        "text": {
+          "type": "mrkdwn",
+          "text": `\`${branch}\` is approved for publishing.`
+        },
+        "accessory": {
+          "type": "button",
           "text": {
             "type": "plain_text",
-            "text": `[${tag}] Release/Hotfix approved ✅`
-          }
-        },
-        {
-          "type": "section",
-          "text": {
-            "type": "mrkdwn",
-            "text": `\`${branch}\` is approved for publishing.`
+            "text": "Go"
           },
-          "accessory": {
-            "type": "button",
-            "text": {
-              "type": "plain_text",
-              "text": "Go"
-            },
-            "url": `${releaseUrl}`,
-            "action_id": "button-action"
-          }
+          "url": `${releaseUrl}`,
+          "action_id": "button-action"
         }
-      ]
-    })
-  }
+      }
+    ]
+  })
 }
 
 /**
@@ -135,34 +157,32 @@ const handleReleaseSignedOff = async (labels, octokit, tag, branch) => {
  * @param {string} tag Tag that was meant to be released
  * @param {string} branch Release branch that will be deleted
  */
-const handleReleaseCancelled = async (labels, tag, branch) => {
-  if (!labels.includes('QA Approved')) {
-    // Post cancelled message
-    await postToSlack({
-      "blocks": [
-        {
-          "type": "header",
-          "text": {
-            "type": "plain_text",
-            "text": `[${tag}] Release/Hotfix cancelled ❌`
-          }
-        },
-        {
-          "type": "section",
-          "text": {
-            "type": "mrkdwn",
-            "text": `\`${branch}\` was cancelled.`
-          }
+const handleReleaseCancelled = async (tag, branch) => {
+  // Post cancelled message
+  await postToSlack({
+    "blocks": [
+      {
+        "type": "header",
+        "text": {
+          "type": "plain_text",
+          "text": `[${tag}] Release/Hotfix cancelled ❌`
         }
-      ]
-    })
-  }
+      },
+      {
+        "type": "section",
+        "text": {
+          "type": "mrkdwn",
+          "text": `\`${branch}\` was cancelled.`
+        }
+      }
+    ]
+  })
 }
 
 const run = async () => {
   try {
     // Get token and init
-    const token = getInput('workflow-token')
+    const token = getInput("workflow-token")
     const octokit = github.getOctokit(token)
     const issue = await getIssue(octokit)
     const labels = getLabels(issue.labels)
@@ -171,11 +191,13 @@ const run = async () => {
     validateReleaseCandidateIssue(labels)
     const { tag, branch } = parseIssueBody(issue.body)
 
-    // Handle release signed off
-    await handleReleaseSignedOff(labels, octokit, tag, branch)
-
-    // Handle release cancelled
-    await handleReleaseCancelled(labels, tag, branch)
+    if (validateApprovedIssue(labels)) {
+      // Handle release signed off
+      await handleReleaseSignedOff(octokit, tag, branch, issue)
+    } else {
+      // Handle release cancelled
+      await handleReleaseCancelled(tag, branch)
+    }
   } catch (error) {
     core.setFailed(error.message)
   }
