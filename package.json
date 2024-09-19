@@ -1,6 +1,6 @@
 {
   "name": "sign-off-action",
-  "version": "0.0.1",
+  "version": "1.3.0",
   "description": "Github Action that handles a Release Candidate or Hotfix sign off.",
   "main": "index.js",
   "scripts": {
